@@ -9,7 +9,7 @@ const outputDir = join(root, 'dist-upload');
 await rm(outputDir, { recursive: true, force: true });
 await mkdir(outputDir, { recursive: true });
 
-for (const file of ['index.html', 'app.js', 'styles.css', 'favicon.png']) {
+for (const file of ['index.html', 'app.js', 'styles.css', 'favicon.svg']) {
   await cp(join(publicDir, file), join(outputDir, file));
 }
 
