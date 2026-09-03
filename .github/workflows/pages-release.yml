@@ -1,0 +1,36 @@
+name: Publish Pages Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'public/**'
+      - 'scripts/**'
+      - 'functions/**'
+      - '.github/workflows/pages-release.yml'
+
+jobs:
+  pages-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Build Pages upload zip
+        run: |
+          node scripts/build-upload.mjs
+          node scripts/zip-upload.mjs
+      - name: Create release with pages-named version file
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          cp deploy-panel-v2-upload.zip deploy-panel-pages-upload.zip
+          VERSION="pages-v0.2.0"
+          gh release create "$VERSION" deploy-panel-pages-upload.zip --repo "$GITHUB_REPOSITORY" --title "云端部署器 - Pages 上传包（版本文件）" --notes "以 pages 为主体名的版本文件：Cloudflare Pages 控制台上传资产部署包" || gh release upload "$VERSION" deploy-panel-pages-upload.zip --repo "$GITHUB_REPOSITORY" --clobber
