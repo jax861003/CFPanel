@@ -183,6 +183,22 @@ body.deployed .logs-panel pre {
   height: 240px;
 }
 
+/* 日志卡片头部的操作按钮组 */
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 日志折叠：只保留头部，释放移动端操作空间 */
+.logs-panel.collapsed {
+  padding-bottom: 8px;
+}
+
+.logs-panel.collapsed pre {
+  display: none;
+}
+
 /* ===== 面板 ===== */
 .panel {
   background: var(--card);

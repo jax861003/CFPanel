@@ -102,6 +102,22 @@
     根.style.setProperty('--logh', lh + 'px');
   }
 
+  // 日志折叠：状态记在 localStorage，移动端默认折叠
+  function 日志折叠状态() {
+    const 存 = localStorage.getItem('logCollapsed');
+    const 移动端 = window.innerWidth <= 720;
+    if (存 === null) return 移动端;
+    return 存 === '1';
+  }
+
+  function 应用日志折叠() {
+    const 面板 = $('logsPanel');
+    const 折叠 = 日志折叠状态();
+    面板.classList.toggle('collapsed', 折叠);
+    $('toggleLogs').textContent = 折叠 ? '展开' : '折叠';
+    同步吸顶();
+  }
+
   function 生成随机名称(前缀) {
     return `${前缀}-${crypto.randomUUID().slice(0, 8)}`;
   }
@@ -404,6 +420,13 @@
     $('loadAccounts').addEventListener('click', () => { 日志('刷新账户/域名中…'); 刷新账户().then(ok => { if (ok) 刷新资源(); }); });
     $('loadResources').addEventListener('click', () => { 日志('读取现有项目…'); 刷新资源(); });
     $('clearLogs').addEventListener('click', () => { $('logs').textContent = ''; });
+    $('toggleLogs').addEventListener('click', () => {
+      const 面板 = $('logsPanel');
+      const 折叠 = 面板.classList.toggle('collapsed');
+      localStorage.setItem('logCollapsed', 折叠 ? '1' : '0');
+      $('toggleLogs').textContent = 折叠 ? '展开' : '折叠';
+      同步吸顶();
+    });
     $('newNames').addEventListener('click', () => {
       const 一致 = 生成一致名称();
       $('projectName').value = 一致.projectName;
@@ -435,7 +458,7 @@
     });
     window.addEventListener('resize', 同步吸顶);
     切换操作模式('create');
-    同步吸顶();
+    应用日志折叠();
   }
 
   document.addEventListener('DOMContentLoaded', 绑定事件);
