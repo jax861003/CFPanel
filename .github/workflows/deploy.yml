@@ -3,7 +3,7 @@
 #   CLOUDFLARE_API_TOKEN（需 Cloudflare Pages 编辑权限）
 #   CLOUDFLARE_ACCOUNT_ID
 # 配置完成后，每次 push 到 main（或手动触发）会自动把面板部署到你的 Pages 项目。
-# 未配置 secrets 时相关步骤自动跳过（显示 skipped，不会报错）。
+# 未配置 secrets 时脚本自动跳过部署，运行结果显示成功（绿色）。
 name: Deploy
 
 on:
@@ -20,12 +20,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Install
-        if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
-        run: npm install
-      - name: Deploy to Cloudflare Pages
-        if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
-        run: npx wrangler pages deploy public --project-name deploy-panel-v2 --branch main
+      - name: Install and deploy
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::notice::未配置 CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID，跳过自动部署。fork 用户在 Settings → Secrets 配置后可启用。"
+            exit 0
+          fi
+          npm install
+          npx wrangler pages deploy public --project-name deploy-panel-v2 --branch main
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
