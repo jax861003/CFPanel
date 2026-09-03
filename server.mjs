@@ -720,6 +720,7 @@ function 获取类型(文件路径) {
     '.html': 'text/html; charset=utf-8',
     '.css': 'text/css; charset=utf-8',
     '.js': 'text/javascript; charset=utf-8',
+    '.png': 'image/png',
     '.svg': 'image/svg+xml'
   }[extname(文件路径)] || 'application/octet-stream';
 }
