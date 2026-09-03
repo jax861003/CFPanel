@@ -1,103 +1,108 @@
-# CFPanle · 云端部署器
+# CFPanel · 云端部署器
 
-一款基于网页的 **Cloudflare 一键部署面板**：填入 Cloudflare 邮箱与 Global API Key，
-即可把 [cmliu/edgetunnel](https://github.com/cmliu/edgetunnel) 一键部署到你的
-Cloudflare **Worker / Pages**，并自动创建随机项目名、KV、可选子域名与后台管理地址。
+往 Cloudflare 上部署 Worker 这件事，听起来不难，真做起来全是琐碎活：装 wrangler、建 KV、把变量一个个填进配置、再想域名怎么绑。步骤我闭着眼都能数出来，每次还是会被某个 API 的格式卡一下。
 
-> 单源部署 · 密钥不落盘 · 橙色主题界面
+这个面板就是把那套流程收进一个网页。填上 Cloudflare 邮箱和 Global API Key，选 Pages 还是 Worker，点一下，剩下的随机项目名、KV、变量、可选子域名，它自己搞定。面板部署完之后还能留着，以后要更新代码、改参数，打开页面再点一次就行，不用再翻 CLI。
 
-| 项目 | 值 |
-| :--- | :--- |
-| 部署源 | [cmliu/edgetunnel](https://github.com/cmliu/edgetunnel) `_worker.js`（`main` 分支） |
-| KV 绑定 | `KV`（无需预置，Worker 首次访问自动初始化） |
-| 兼容日期 | `2025-11-04` |
-| 后台地址 | `https://<域名或项目地址>/admin` |
+默认部署的是 [edgetunnel](https://github.com/cmliu/edgetunnel)，cmliu 的项目。装好会自动生成一个 `/admin` 后台地址，后台密码你自己设。
 
-## 特性
+**一个前提说清楚**：Global API Key 只在当前请求里转给 Cloudflare API 用一下就丢，不写进浏览器本地存储，也不落盘到服务器。放心用。
 
-- **邮箱 + Global API Key 登录**：密钥只在当前请求内转发给 Cloudflare API，前端不写入本地存储。
-- **一键部署 / 高级部署**：一键默认 Pages + 随机项目名 + 随机 KV；高级部署可指定 Worker / Pages 与全部变量。
-- **随机名称一致管理**：随机项目名与 KV 名称共用同一个 8 位编码（如 `edge-ab9fe59b` / `store-ab9fe59b`）。
-- **更新现有项目**：只同步代码，不修改变量、KV、域名或项目配置。
-- **可选域名绑定**：Zone 下拉选择，可绑定随机子域名或自定义域名；Worker 支持 Route 绑定。
-- **全部变量可配**：`ADMIN`（必填）+ `KEY`/`UUID`/`PROXYIP`/`URL`/`GO2SOCKS5`/`DEBUG`/`OFF_LOG`/`BEST_SUB`/`PRELOAD_RACE_DIAL`/`TCP_CONCURRENT_DIAL`/`PROXY_CONCURRENT_DIAL`（选填，留空不写入）。
-- **直接 Cloudflare API 上传**：不依赖 wrangler CLI；对 Pages 传播延迟（`Project not found`）内置自动重试。
+## 它能干什么
 
-## 部署方式
+- **一键部署**：默认走 Pages，随机项目名、随机 KV、随机子域名，填个后台密码就能跑
+- **高级部署**：自己想说了算的时候，手动选 Worker 还是 Pages，项目名、域名、KV、各个变量都自己填
+- **更新已有项目**：账号里已经部署过的项目，直接在面板里选，只同步代码，不动它现有的变量、KV 和域名
+- **绑定域名**：Zone 下拉选一个域名，自动帮你绑上随机子域名或者自定义域名，Worker 还支持 Route 绑定
+- **随机名成对**：随机项目名和 KV 名共用一个 8 位随机串，比如 `edge-ab9fe59b` / `store-ab9fe59b`，在控制台里也好认
 
-### 方式一：Cloudflare Pages 控制台上传
+## 先把面板部署起来
+
+CFPanel 本身是纯静态页面 + 一层很薄的 API，前后端打包在一起，可以直接传成 Cloudflare Pages。三条路任选。
+
+**控制台上传（最省事）**
 
 ```bash
 npm install
 npm run pack:upload
 ```
 
-生成 `deploy-panel-v2-upload.zip`（含 `index.html`、`app.js`、`styles.css`、`favicon.png`、`_worker.js`），
-在 Cloudflare Pages 控制台「上传资产」上传即可，无需构建命令。
+项目根目录会生成 `deploy-panel-v2-upload.zip`（里面是 `index.html`、`app.js`、`styles.css`、`favicon.png`、`_worker.js` 五个文件）。去 Cloudflare 控制台 → Pages → 创建项目 → 上传资产，把这个 zip 拖进去就行，不用配任何构建命令。
 
-### 方式二：wrangler CLI
+**wrangler 命令行**
 
 ```bash
 npm install
 npm run deploy
 ```
 
-### 方式三：GitHub Actions 自动部署
+**GitHub Actions 自动部署**
 
-Fork / Push 到 GitHub 后，在仓库 **Settings → Secrets and variables → Actions** 配置：
+fork 一份之后，在仓库 Settings → Secrets and variables → Actions 里加两个 secret：
 
 - `CLOUDFLARE_API_TOKEN`
 - `CLOUDFLARE_ACCOUNT_ID`
 
-推送 `main` 分支即自动部署到 Cloudflare Pages（项目名 `deploy-panel-v2`）。
+之后推 main 分支就会自动部署（项目名固定 `deploy-panel-v2`）。
 
-### 本地调试
+**本地先跑起来看看**
 
 ```bash
 npm start
-# 默认 8790 端口；若被占用：$env:PORT="8792"; npm start
 ```
 
-## 使用说明
+默认监听 8790 端口，被占用了就 `$env:PORT="8792"; npm start` 换一个，浏览器开 `http://localhost:8790` 就能用。
 
-页面为**橙色系纵向布局**：顶部三栏式标题栏（标题 / 说明 / Key 安全提示）常驻吸顶；
-登录后「日志栏 + 部署结果卡片」固定在标题栏下方同样常驻，页面超出可视范围时滚动从操作卡片开始。
+## 在面板里部署 edgetunnel
 
-1. **登录**：填 Cloudflare 邮箱 + Global API Key（密钥不落盘）。
-2. **操作卡片**：切换「随机新建 / 更新现有」。
-   - 随机新建：在「一键部署」卡片填写并部署，可绑定随机子域名。
-   - 更新现有：选择现有项目后点击「更新现有项目」，只同步代码。
-3. **部署结果**：成功 / 失败信息统一显示在独立的「部署结果」卡片（位于日志与操作卡片之间）。
-4. **ADMIN 后台密码**：密码框旁有「随机」「复制」按钮；未填写直接部署时对应输入框会标红提示。
-5. **高级设置**（仅随机新建时生效），选填部分分三段——
-   - **部署主体（必填）**：Account、部署方式（Pages / Worker）、项目名称、ADMIN 密码。
-   - **域名 / KV / UUID（选填）**：Zone、自定义域名、KV 名称、现有 KV、UUID（输入框旁有「生成」「复制」）。
-   - **更多参数（默认折叠）**：KEY / PROXYIP / URL / GO2SOCKS5 / DEBUG / OFF_LOG / BEST_SUB / PRELOAD_RACE_DIAL / TCP_CONCURRENT_DIAL / PROXY_CONCURRENT_DIAL，以及 workers.dev 启用下拉。
+1. **登录**：填 Cloudflare 邮箱 + Global API Key。
+2. **选操作**：左侧「操作」卡片里选「随机新建」还是「更新现有」。
+   - 随机新建：在一键部署卡片填个 ADMIN 后台密码（旁边有随机生成、复制的按钮），点「一键部署」。想自己控制的，展开「高级设置」。
+   - 更新现有：下拉里会列出账号里已有的 Worker / Pages 项目，选一个点「更新现有项目」，只同步代码。
+3. **看结果**：成功或失败会显示在「部署结果」卡片，完整过程在日志栏里能翻到。
 
-### 一键部署失败排查
+高级设置里的参数分三段：
 
-若出现 `Project not found`，通常是 Pages 项目刚创建后 Cloudflare 传播延迟所致，后端已内置自动重试；
-本地版与托管版均采用 Cloudflare 直接 API 上传，不依赖 wrangler CLI。
+**部署主体（必填）**：Account（默认登录账号）、部署方式（Pages / Worker）、项目名称（留空就随机）、ADMIN 后台密码。
+
+**域名 / KV / UUID（选填）**：Zone 域名、自定义域名、KV 名称、要不要复用现有 KV、UUID（旁边有生成和复制按钮）。
+
+**更多参数（默认折叠）**：edgetunnel 的全部可选变量，留空的不会写入：
+
+| 变量 | 作用 |
+| --- | --- |
+| `KEY` | 订阅密钥 |
+| `PROXYIP` | 全局反代地址 |
+| `URL` | 伪装主页 |
+| `GO2SOCKS5` | 强制走代理的域名，逗号分隔 |
+| `DEBUG` | 调试日志 |
+| `OFF_LOG` | 关闭日志 |
+| `BEST_SUB` | 优选订阅 |
+| `PRELOAD_RACE_DIAL` | 预连接竞速 |
+| `TCP_CONCURRENT_DIAL` | TCP 并发数 |
+| `PROXY_CONCURRENT_DIAL` | 代理并发数 |
+
+另外还有 workers.dev 是否启用的下拉。
+
+## 常见问题
+
+**部署报 `Project not found`？**
+Pages 项目刚创建时 Cloudflare 侧还没同步完，属于传播延迟，面板内置了自动重试，等一下一般自己就好。这也是为什么它直接调 Cloudflare 官方 API 传代码，不依赖本机装 wrangler。
+
+**Global API Key 安全吗？**
+只存在当前请求里，转发给 Cloudflare API 用完即弃，前端不写 localStorage，后端不落盘。部署面板时也不用把 Key 写进任何配置。
 
 ## 目录结构
 
 ```
-├─ public/                    前端（部署器面板）
-│  ├─ index.html              页面结构
-│  ├─ app.js                  前端逻辑
-│  ├─ styles.css              样式（橙色主题）
-│  └─ favicon.png             标签页图标
-├─ functions/api/[[path]].js  托管版后端（Cloudflare Workers）
-├─ server.mjs                 本地版后端（Node，同 API）
-├─ scripts/                   构建与打包脚本
-├─ .github/workflows/deploy.yml  GitHub Actions 自动部署
-├─ wrangler.toml              wrangler 配置
-└─ README.md
+public/                   面板前端
+  index.html              页面结构
+  app.js                  前端逻辑
+  styles.css              样式
+  favicon.png             图标
+functions/api/[[path]].js 托管版后端（部署在 Cloudflare Workers 里）
+server.mjs                本地版后端（Node，接口和托管版一致）
+scripts/                  打包脚本
+.github/workflows/        Actions 自动部署
+wrangler.toml             wrangler 配置
 ```
-
-## 技术说明
-
-- 前后端同一套 `/api/*` 接口（`accounts` / `zones` / `resources` / `deploy`）。
-- 托管版（`functions/api/[[path]].js`）与本地版（`server.mjs`）逻辑一致，均可独立运行。
-- 部署流程：获取或创建 KV → 部署 Worker（PUT scripts + metadata bindings）或
-  Pages（创建 / 更新项目 + 直接上传）→ 可选绑定域名 → 列出域名。
