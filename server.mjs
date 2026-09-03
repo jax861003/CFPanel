@@ -271,6 +271,7 @@ function 构建变量(数据) {
 async function 部署Worker(凭据, 选项, 记录) {
   const 代码 = await 读取源代码();
   const 变量 = 构建变量(选项.部署数据);
+  const 表单 = new FormData();
   const 元数据 = {
     main_module: 部署源.mainModule,
     compatibility_date: 部署源.compatibilityDate,
@@ -279,7 +280,6 @@ async function 部署Worker(凭据, 选项, 记录) {
       { type: 'kv_namespace', name: 部署源.kvBinding, namespace_id: 选项.kvId }
     ]
   };
-  const 表单 = new FormData();
   表单.append('metadata', new Blob([JSON.stringify(元数据)], { type: 'application/json' }), 'metadata.json');
   表单.append(部署源.mainModule, new Blob([代码], { type: 'application/javascript+module' }), 部署源.mainModule);
   await 调用接口(凭据, `/accounts/${选项.accountId}/workers/scripts/${encodeURIComponent(选项.scriptName)}`, {
@@ -706,7 +706,7 @@ async function 处理静态文件(请求, 响应) {
     return;
   }
   const 类型 = 获取类型(文件路径);
-  响应.writeHead(200, { 'Content-Type': 类型 });
+  响应.writeHead(200, { 'Content-Type': 类型, 'Cache-Control': 'no-cache' });
   响应.end(await readFile(文件路径));
 }
 
