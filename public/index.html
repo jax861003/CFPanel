@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>云端部署器</title>
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <!-- 三栏式标题栏 -->
+      <header class="hero">
+        <div class="hero-title">
+          <p class="eyebrow">Cloudflare 一键部署</p>
+          <h1>云端部署器</h1>
+        </div>
+        <div class="hero-text">
+          <p>填邮箱和 Global API Key，一键部署 edgetunnel（cmliu）到 Cloudflare Worker / Pages，自动创建随机项目名、KV 和可选子域名。后台地址为 <code>/admin</code>。</p>
+        </div>
+        <aside class="status-card">
+          <span class="status-dot"></span>
+          <strong>Key 不会持久化</strong>
+          <p>前端不写入本地存储，仅在当前请求内把密钥转发给 Cloudflare API。</p>
+        </aside>
+      </header>
+
+      <!-- 主流程（日志栏/结果卡按登录状态自动定位并常驻吸顶） -->
+      <div class="main-flow">
+
+        <!-- 登录 -->
+        <section id="loginPage" class="panel login-panel">
+          <div class="panel-head">
+            <div>
+              <h2>登录 Cloudflare</h2>
+              <p>只需要邮箱和 Global API Key，登录后进入部署页。</p>
+            </div>
+          </div>
+          <div class="grid two">
+            <label>
+              <span>邮箱</span>
+              <input id="email" autocomplete="username" placeholder="you@example.com" />
+            </label>
+            <label>
+              <span>Global API Key</span>
+              <input id="key" type="password" autocomplete="current-password" placeholder="Cloudflare Global API Key" />
+            </label>
+          </div>
+          <div class="quick-action">
+            <button id="loginButton" class="primary">登录并继续</button>
+            <div id="loginStatus" class="result">未登录</div>
+          </div>
+        </section>
+
+        <!-- 部署（登录后） -->
+        <section id="deployPage" class="page-hidden">
+
+          <!-- 卡片 1：操作选择 -->
+          <section class="panel op-card">
+            <div class="panel-head">
+              <div>
+                <h2>操作</h2>
+                <p>选择随机新建或更新现有项目。</p>
+              </div>
+              <div class="button-group">
+                <button id="loadAccounts" class="toolbar-btn">刷新账户/域名</button>
+                <button id="loadResources" class="toolbar-btn">读取现有项目</button>
+              </div>
+            </div>
+            <div class="op-select" id="opSelect">
+              <button type="button" class="op-btn active" data-mode="create">随机新建</button>
+              <button type="button" class="op-btn" data-mode="update">更新现有</button>
+            </div>
+            <div id="updateArea" class="page-hidden">
+              <div class="grid two">
+                <label class="span-two">
+                  <span>现有项目（更新时选择）</span>
+                  <select id="existingProject"></select>
+                </label>
+              </div>
+              <div class="quick-action">
+                <button id="updateDeploy" class="primary">更新现有项目</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- 卡片 2：一键部署（仅随机新建激活） -->
+          <section class="panel quick-panel" id="quickPanel">
+            <div class="panel-head">
+              <div>
+                <h2>一键部署</h2>
+                <p>默认 Pages + 随机项目名 + 随机 KV；只需填 ADMIN 后台密码即可。绑定域名可选。</p>
+              </div>
+              <button id="backToLogin" class="secondary">返回登录</button>
+            </div>
+            <div class="grid two">
+              <label>
+                <span>ADMIN 后台密码（必填）</span>
+                <div class="uuid-row">
+                  <input id="quickAdmin" placeholder="设置后台管理面板密码" autocomplete="off" />
+                  <button type="button" id="randomQuickAdmin" class="toolbar-btn" title="随机生成密码">随机</button>
+                  <button type="button" id="copyQuickAdmin" class="toolbar-btn" title="复制密码">复制</button>
+                </div>
+              </label>
+              <label>
+                <span>可选域名（Zone）</span>
+                <select id="quickZone"></select>
+              </label>
+              <label>
+                <span>随机子域名预览</span>
+                <input id="quickHostnamePreview" value="不绑定域名" disabled />
+              </label>
+              <label class="toggle">
+                <input id="bindDomain" type="checkbox" />
+                <span>绑定随机子域名</span>
+              </label>
+            </div>
+            <div class="quick-action">
+              <button id="quickDeploy" class="primary">一键部署</button>
+            </div>
+
+            <!-- 高级部署 -->
+            <details class="advanced-panel">
+              <summary>高级设置</summary>
+              <div class="panel-toolbar">
+                <p>可指定 Worker / Pages，并配置全部变量；名称留空自动随机。</p>
+                <div class="button-group">
+                  <button id="newNames" class="toolbar-btn">随机名称</button>
+                </div>
+              </div>
+
+              <!-- 第一段：部署主体（必填） -->
+              <section class="form-block required-block">
+                <h3 class="block-title"><span class="tag req">必填</span> 部署主体</h3>
+                <div class="grid two">
+                  <label>
+                    <span>Account</span>
+                    <select id="accountId"></select>
+                  </label>
+                  <label>
+                    <span>部署方式</span>
+                    <select id="deployType">
+                      <option value="pages">Pages</option>
+                      <option value="worker">Worker</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>项目名称（留空自动随机）</span>
+                    <input id="projectName" placeholder="留空自动生成" />
+                  </label>
+                  <label>
+                    <span>ADMIN 后台密码（必填）</span>
+                    <div class="uuid-row">
+                      <input id="admin" placeholder="设置后台管理面板密码" autocomplete="off" />
+                      <button type="button" id="randomAdmin" class="toolbar-btn" title="随机生成密码">随机</button>
+                      <button type="button" id="copyAdmin" class="toolbar-btn" title="复制密码">复制</button>
+                    </div>
+                  </label>
+                </div>
+              </section>
+
+              <!-- 第二段：域名 / KV / UUID（选填） -->
+              <section class="form-block optional-block">
+                <h3 class="block-title"><span class="tag opt">选填</span> 域名 / KV / UUID</h3>
+                <div class="grid two">
+                  <label>
+                    <span>Zone</span>
+                    <select id="zoneId"></select>
+                  </label>
+                  <label>
+                    <span>自定义域名</span>
+                    <input id="advancedHostname" placeholder="留空不绑定，填根域则随机子域名" />
+                  </label>
+                  <label>
+                    <span>KV 名称（留空自动随机）</span>
+                    <input id="kvTitle" placeholder="留空自动生成" />
+                  </label>
+                  <label>
+                    <span>现有 KV（选填）</span>
+                    <select id="kvId"></select>
+                  </label>
+                  <label class="span-two">
+                    <span>UUID（固定节点 UUID）</span>
+                    <div class="uuid-row">
+                      <input id="edtUuid" placeholder="UUIDv4 格式" autocomplete="off" />
+                      <button type="button" id="newUuid" class="toolbar-btn" title="生成 UUID">生成</button>
+                      <button type="button" id="copyUuid" class="toolbar-btn" title="复制 UUID">复制</button>
+                    </div>
+                  </label>
+                </div>
+              </section>
+
+              <!-- 第三段：更多参数（默认折叠） -->
+              <details class="more-params">
+                <summary>更多参数</summary>
+                <div class="grid three">
+                  <label>
+                    <span>KEY（订阅密钥）</span>
+                    <input id="edtKey" placeholder="如 CMLiussss" autocomplete="off" />
+                  </label>
+                  <label>
+                    <span>PROXYIP（全局反代）</span>
+                    <input id="edtProxyip" placeholder="如 proxyip.cmliussss.net:443" autocomplete="off" />
+                  </label>
+                  <label>
+                    <span>URL（伪装主页）</span>
+                    <input id="edtUrl" placeholder="网页 URL 或 1101" autocomplete="off" />
+                  </label>
+                  <label>
+                    <span>GO2SOCKS5（强制名单）</span>
+                    <input id="edtGo2socks5" placeholder="域名逗号分隔" autocomplete="off" />
+                  </label>
+                  <label>
+                    <span>DEBUG（调试日志）</span>
+                    <input id="edtDebug" placeholder="1 或 true" autocomplete="off" />
+                  </label>
+                  <label>
+                    <span>OFF_LOG（关闭日志）</span>
+                    <input id="edtOfflog" placeholder="1 或 true" autocomplete="off" />
+                  </label>
+                  <label>
+                    <span>BEST_SUB（优选订阅）</span>
+                    <input id="edtBestsub" placeholder="1 或 true" autocomplete="off" />
+                  </label>
+                  <label>
+                    <span>PRELOAD_RACE_DIAL</span>
+                    <input id="edtPreload" placeholder="1 或 true" autocomplete="off" />
+                  </label>
+                  <label>
+                    <span>TCP_CONCURRENT_DIAL</span>
+                    <input id="edtTcp" placeholder="默认 2" autocomplete="off" />
+                  </label>
+                  <label>
+                    <span>PROXY_CONCURRENT_DIAL</span>
+                    <input id="edtProxyConcurrent" placeholder="默认 1" autocomplete="off" />
+                  </label>
+                  <label>
+                    <span>workers.dev</span>
+                    <select id="workersDevMode">
+                      <option value="">不启用</option>
+                      <option value="1">启用</option>
+                    </select>
+                  </label>
+                </div>
+              </details>
+
+              <p id="modeHint" class="form-note">新建模式会按表单配置变量、KV 和可选域名；留空的选填参数不会写入。</p>
+              <section class="action-row">
+                <button id="deploy" class="primary">高级部署</button>
+              </section>
+            </details>
+          </section>
+        </section>
+
+        <!-- 部署结果（独立卡片，位于日志与操作卡片之间，登录后常驻） -->
+        <section class="panel result-panel page-hidden" id="resultPanel">
+          <div class="panel-head compact">
+            <h2>部署结果</h2>
+          </div>
+          <div id="result" class="result">等待部署</div>
+        </section>
+
+        <!-- 日志栏 -->
+        <section class="panel logs-panel" id="logsPanel">
+          <div class="panel-head compact">
+            <h2>日志</h2>
+            <button id="clearLogs" class="secondary small">清空</button>
+          </div>
+          <pre id="logs"></pre>
+        </section>
+
+      </div>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>

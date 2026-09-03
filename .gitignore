@@ -1,0 +1,5 @@
+node_modules/
+dist-upload/
+deploy-panel-v2-upload.zip
+public/sources/
+.wrangler/
